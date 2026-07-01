@@ -1,0 +1,6 @@
+node_modules/
+dist/
+
+# local env overrides (.env.example is the committed template)
+.env
+.env.local
