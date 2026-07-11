@@ -2,15 +2,18 @@
 
 A standalone, multi-page showcase of the [`@remetry/browser`](https://www.npmjs.com/package/@remetry/browser)
 SDK. It installs the SDK exactly the way you would in your own project — as a normal npm
-dependency (here resolved from the vendored tarball in `vendor/`; once the package is on the
-registry the dependency simply becomes `"@remetry/browser": "^1.0.0"`) — and exercises every
+dependency straight from the registry (`"@remetry/browser": "^1.0.1"`) — and exercises every
 capture surface from real UI: errors, network calls, web vitals, session replay, release
 regression, and the server's tenancy/limit protections.
+
+The GitHub Pages deployment of this demo reports to the live Remetry cloud:
+events go to `https://ingest.remetry.dev/ingest/events` under the `demo-public-dsn`
+project, dashboard at [app.remetry.dev](https://app.remetry.dev).
 
 ## Quick start
 
 ```bash
-npm install      # resolves @remetry/browser (vendored tarball) + deps
+npm install      # resolves @remetry/browser from npm + deps
 npm run dev      # http://localhost:5174
 ```
 

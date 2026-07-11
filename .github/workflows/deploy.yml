@@ -2,11 +2,11 @@
 # PR: только build+typecheck. Push в main: build → Pages.
 #
 # Перед первым запуском: Settings → Pages → Source = "GitHub Actions".
-# Опциональные repo variables (Settings → Variables → Actions), чтобы витрина
-# била в живой Remetry на Oracle VM, а не в localhost-дефолты:
-#   VITE_REMETRY_ENDPOINT  напр. https://remetry-ingest.duckdns.org/ingest/events
+# Дефолты бьют в живой Remetry (remetry.dev, DSN demo-public-dsn). Переопределить
+# можно repo variables (Settings → Variables → Actions):
+#   VITE_REMETRY_ENDPOINT  ingest-эндпоинт, полный URL с /ingest/events
 #   VITE_REMETRY_DSN       public DSN проекта из dashboard
-#   VITE_DASHBOARD_URL     напр. https://remetry-app.duckdns.org
+#   VITE_DASHBOARD_URL     напр. https://app.remetry.dev
 # Мок-API (/__mock) живёт только в vite dev — на Pages страница API-демо будет
 # получать сетевые ошибки; для витрины это ок (они сами же летят в Remetry).
 name: deploy
@@ -38,9 +38,9 @@ jobs:
       - run: npm run typecheck
       - name: build (base = /<repo>/ для project pages)
         env:
-          VITE_REMETRY_ENDPOINT: ${{ vars.VITE_REMETRY_ENDPOINT || 'http://localhost:8080/ingest/events' }}
+          VITE_REMETRY_ENDPOINT: ${{ vars.VITE_REMETRY_ENDPOINT || 'https://ingest.remetry.dev/ingest/events' }}
           VITE_REMETRY_DSN: ${{ vars.VITE_REMETRY_DSN || 'demo-public-dsn' }}
-          VITE_DASHBOARD_URL: ${{ vars.VITE_DASHBOARD_URL || 'http://localhost:5173' }}
+          VITE_DASHBOARD_URL: ${{ vars.VITE_DASHBOARD_URL || 'https://app.remetry.dev' }}
         run: npx vite build --base "/${{ github.event.repository.name }}/"
       - name: SPA fallback (BrowserRouter → 404.html)
         run: cp dist/index.html dist/404.html
