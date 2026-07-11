@@ -36,12 +36,43 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
+      # Unique release per deploy: the symbolication worker caches the artifact
+      # list per (project, release), so reusing one release across deploys would
+      # leave new bundle hashes unsymbolicated until a worker restart.
+      - name: compute release id
+        run: echo "DEMO_RELEASE=demo@${GITHUB_SHA::7}" >> "$GITHUB_ENV"
       - name: build (base = /<repo>/ для project pages)
         env:
           VITE_REMETRY_ENDPOINT: ${{ vars.VITE_REMETRY_ENDPOINT || 'https://ingest.remetry.dev/ingest/events' }}
           VITE_REMETRY_DSN: ${{ vars.VITE_REMETRY_DSN || 'demo-public-dsn' }}
           VITE_DASHBOARD_URL: ${{ vars.VITE_DASHBOARD_URL || 'https://app.remetry.dev' }}
+          # Must match RELEASE in the source-map upload step below, or the
+          # worker won't find the maps for the events this build emits.
+          VITE_REMETRY_RELEASE: ${{ vars.VITE_REMETRY_RELEASE || env.DEMO_RELEASE }}
         run: npx vite build --base "/${{ github.event.repository.name }}/"
+      # Symbolication: push the build's .map files to Remetry so error stacks in
+      # the dashboard show original files/lines instead of index-XXX.js:1:2345.
+      # Needs the REMETRY_UPLOAD_TOKEN secret (= UPLOAD_TOKEN of the ingestion
+      # server). Without it the step skips and stacks stay minified.
+      - name: upload source maps to Remetry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        # An ingest outage must not take the showcase down; without maps the
+        # dashboard just falls back to the minified stack.
+        continue-on-error: true
+        env:
+          UPLOAD_TOKEN: ${{ secrets.REMETRY_UPLOAD_TOKEN }}
+          INGEST_BASE: ${{ vars.REMETRY_INGEST_BASE || 'https://ingest.remetry.dev' }}
+          DSN: ${{ vars.VITE_REMETRY_DSN || 'demo-public-dsn' }}
+          RELEASE: ${{ vars.VITE_REMETRY_RELEASE || env.DEMO_RELEASE }}
+        run: |
+          if [ -z "$UPLOAD_TOKEN" ]; then
+            echo "::warning::REMETRY_UPLOAD_TOKEN secret not set — skipping source map upload (stacks stay minified)"
+            exit 0
+          fi
+          node scripts/upload-sourcemaps.mjs
+      # Maps are for Remetry only — never publish them to Pages.
+      - name: strip .map from Pages artifact
+        run: find dist -name '*.map' -delete
       - name: SPA fallback (BrowserRouter → 404.html)
         run: cp dist/index.html dist/404.html
       - uses: actions/upload-pages-artifact@v3

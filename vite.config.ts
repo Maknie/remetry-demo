@@ -12,6 +12,13 @@ import { mockApiPlugin } from "./mock/server";
 // the same dev server.
 export default defineConfig({
   plugins: [react(), mockApiPlugin()],
+  build: {
+    // "hidden": emit .map files for the Remetry symbolication upload (CI) but
+    // don't append sourceMappingURL comments — the maps never ship to Pages
+    // (deploy.yml deletes them from dist after upload), so a comment would
+    // only produce 404 noise in visitors' devtools.
+    sourcemap: "hidden",
+  },
   server: {
     host: true,
     port: 5174, // standalone demo port (dashboard runs on 5173)
